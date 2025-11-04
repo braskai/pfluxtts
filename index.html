@@ -1,5 +1,172 @@
-<!doctype html>
-<html>
-  <head><meta charset="utf-8"><title>Rask.ai PFluxTTS</title></head>
-  <body><h1>Samples</h1></body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PFluxTTS — Hybrid Flow-Matching TTS Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0b10; --card:#12141a; --muted:#9aa0a6; --ink:#e7e9ee; --line:#24272f;
+    --chip:#1a1d25; --brand:#78a6ff; --radius:14px; --shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 18px}
+  h1{margin:0 0 8px;font-size:32px;line-height:1.15}
+  .authors{color:#cdd2d8;margin:6px 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  h2{margin:0 0 10px;font-size:20px}
+  p{margin:0 0 12px;color:#e0e3e9;line-height:1.6}
+  .arch{margin-top:24px;text-align:center}
+  .arch img{width:100%;max-width:720px;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow)}
+  .section{margin-top:34px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .sample{background:#0f1117;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .sample-head{padding:12px 14px 6px}
+  .sid{font-weight:700;font-size:14px;word-break:break-word}
+  .text{padding:0 14px 10px;color:#b9bfc6;font-style:italic;border-bottom:1px dashed #2a2e38}
+  .players{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
+  @media (max-width:640px){.players{grid-template-columns:1fr}}
+  .cell{background:var(--chip);border:1px solid #242a34;border-radius:10px;padding:10px}
+  .label{font-size:12px;color:#a2b6ff;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+  audio{width:100%;height:36px}
+  .missing{color:#9aa0a6;font-size:12px;text-align:center;border:1px dashed #303543;border-radius:8px;padding:8px}
+  footer{color:var(--muted);text-align:center;margin:40px 0 10px;font-size:13px}
+
+.refnote {
+  text-align:center;
+  font-size:13px;
+  color:#7f868c;
+  margin-bottom:40px;
+}
+.refnote a {
+  color:#9da3aa;
+  text-decoration:none;
+}
+.refnote a:hover {
+  color:#cfd4d8;
+  text-decoration:underline;
+}
+
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>PFluxTTS: Hybrid Flow-Matching TTS with Robust Cross-Lingual Voice Cloning and Inference-Time Model Fusion</h1>
+      <div class="authors">
+        Vikentii Pankov, Artem Gribul, Oktai Tatanov, Vladislav Proskurov, Yuliya Korotkova, Darima Mylzenova, Dmitrii Vypirailenko
+      </div>
+      <h2>Abstract</h2>
+      <p>
+        We present PFluxTTS, a hybrid text-to-speech system addressing three gaps in flow-matching TTS: the stability–naturalness trade-off, weak cross-lingual voice cloning, and limited audio quality from low-rate mel features. 
+        Our contributions are: (1) a dual-decoder design combining duration-guided and alignment-free models through inference-time vector-field fusion; (2) robust cloning using a sequence of speech-prompt embeddings in a FLUX-based decoder, preserving speaker traits across languages without prompt transcripts; and (3) a modified PeriodWave vocoder with super-resolution to 48 kHz. 
+        On cross-lingual in-the-wild data, PFluxTTS outperforms F5-TTS, FishSpeech, and SparkTTS, matches ChatterBox in naturalness while achieving lower WER, and surpasses ElevenLabs in speaker similarity. Audio demos below.
+      </p>
+      <div class="arch">
+        <img src="assets/arch.png" alt="PFluxTTS Architecture">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Audio Samples</h2>
+      <div id="grid" class="grid" aria-live="polite"></div>
+    </div>
+
+    <footer>© 2025 RASK AI</footer>
+  </div>
+
+<script>
+  const ORDER = ["reference","proposed","chatterbox","fishspeech","f5tts","elevenlabs"];
+  const LABELS = {
+    reference:"Reference",
+    proposed:"Proposed",
+    chatterbox:"ChatterBox",
+    fishspeech:"FishSpeech",
+    f5tts:"F5-TTS",
+    elevenlabs:"ElevenLabs"
+  };
+
+  const grid = document.getElementById("grid");
+
+  function audioCell(kind, url){
+    const d = document.createElement("div");
+    d.className = "cell";
+    const lab = document.createElement("div");
+    lab.className = "label";
+    lab.textContent = LABELS[kind] || kind;
+    d.appendChild(lab);
+    if(url){
+      const a = document.createElement("audio");
+      a.controls = true;
+      a.preload = "none";
+      a.src = url;
+      d.appendChild(a);
+    } else {
+      const m = document.createElement("div");
+      m.className = "missing";
+      m.textContent = "missing";
+      d.appendChild(m);
+    }
+    return d;
+  }
+
+  function card(sample){
+    const root = document.createElement("article");
+    root.className = "sample";
+
+    const head = document.createElement("div");
+    head.className = "sample-head";
+    const sid = document.createElement("div");
+    sid.className = "sid";
+    sid.textContent = sample.sample_id;
+    head.appendChild(sid);
+    root.appendChild(head);
+
+    if(sample.text && sample.text.trim()){
+      const t = document.createElement("div");
+      t.className = "text";
+      t.textContent = sample.text;
+      root.appendChild(t);
+    }
+
+    const players = document.createElement("div");
+    players.className = "players";
+    ORDER.forEach(k=>{
+      const url = sample.paths?.[k] || "";
+      players.appendChild(audioCell(k,url));
+    });
+    root.appendChild(players);
+    return root;
+  }
+
+  async function main(){
+    try{
+      const res = await fetch("manifest.json", {cache:"no-store"});
+      if(!res.ok) throw new Error("manifest.json not found");
+      const data = await res.json();
+      const samples = Array.isArray(data) ? data : (data.samples || []);
+      samples.forEach(s=>grid.appendChild(card(s)));
+    }catch(e){
+      grid.innerHTML = '<div class="missing">Place <code>manifest.json</code> next to <code>index.html</code>.</div>';
+      console.error(e);
+    }
+  }
+  main();
+</script>
+
+<footer>© 2025 RASK AI/footer>
+
+<div class="refnote">
+  Reference samples based on
+  <a href="https://arxiv.org/abs/2102.01757" target="_blank" rel="noopener">
+    Salesky et&nbsp;al., <em>Multilingual TEDx Corpus</em> (2021)
+  </a>.
+</div>
+
+
+</body>
 </html>
